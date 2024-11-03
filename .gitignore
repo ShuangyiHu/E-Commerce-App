@@ -1,0 +1,17 @@
+# Dart/Flutter related
+build/
+pubspec.lock
+
+# Android related
+android/.gradle/
+android/build/
+**/local.properties
+
+# iOS related
+ios/Flutter/.last_build_id
+ios/Pods/
+
+# IDE files
+*.iml
+.idea/
+.vscode/
