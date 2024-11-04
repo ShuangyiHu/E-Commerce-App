@@ -1,14 +1,9 @@
 import 'package:flutter/material.dart';
-import 'services/database_service.dart';
+import 'pages/category_page.dart';
+import 'pages/product_page.dart';
+import 'pages/review_page.dart';
 
-void main() async {
-  // Ensure Flutter bindings are initialized
-  WidgetsFlutterBinding.ensureInitialized();
-  
-  // Initialize database
-  final dbService = DatabaseService();
-  await dbService.database;
-  
+void main() {
   runApp(const MyApp());
 }
 
@@ -22,9 +17,50 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
-      home: const Scaffold(
-        body: Center(
-          child: Text('Database initialized'),
+      home: const HomePage(),
+    );
+  }
+}
+
+class HomePage extends StatelessWidget {
+  const HomePage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('E-Commerce App')),
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            ElevatedButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => CategoryPage()),
+                );
+              },
+              child: const Text('Manage Categories'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => ProductPage()),
+                );
+              },
+              child: const Text('Manage Products'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => ReviewPage()),
+                );
+              },
+              child: const Text('Manage Reviews'),
+            ),
+          ],
         ),
       ),
     );

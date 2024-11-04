@@ -1,9 +1,12 @@
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
+import '../models/category.dart';
+import '../models/product.dart';
+import '../models/review.dart';
 
 class DatabaseService {
   static Database? _database;
-  
+
   // Get database instance
   Future<Database> get database async {
     if (_database != null) return _database!;
@@ -15,7 +18,7 @@ class DatabaseService {
   Future<Database> _initDatabase() async {
     // Get the default database path
     String path = join(await getDatabasesPath(), 'ecommerce.db');
-    
+
     // Open/create the database
     return await openDatabase(
       path,
@@ -50,7 +53,8 @@ class DatabaseService {
       )
     ''');
     await db.execute('CREATE INDEX idx_product_name ON products(name)');
-    await db.execute('CREATE INDEX idx_product_category ON products(category_id)');
+    await db
+        .execute('CREATE INDEX idx_product_category ON products(category_id)');
 
     // Create reviews table with index on product_id
     await db.execute('''
@@ -70,5 +74,116 @@ class DatabaseService {
   Future<void> close() async {
     final db = await database;
     db.close();
+  }
+
+  // Add a new category
+  Future<int> insertCategory(Category category) async {
+    final db = await database;
+    return await db.insert('categories', category.toMap());
+  }
+
+// Retrieve all categories
+  Future<List<Category>> getCategories() async {
+    final db = await database;
+    final List<Map<String, dynamic>> maps = await db.query('categories');
+
+    return List.generate(maps.length, (i) {
+      return Category.fromMap(maps[i]);
+    });
+  }
+
+// Update a category
+  Future<int> updateCategory(Category category) async {
+    final db = await database;
+    return await db.update(
+      'categories',
+      category.toMap(),
+      where: 'id = ?',
+      whereArgs: [category.id],
+    );
+  }
+
+// Delete a category
+  Future<int> deleteCategory(int id) async {
+    final db = await database;
+    return await db.delete(
+      'categories',
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
+  // Add a new product
+  Future<int> insertProduct(Product product) async {
+    final db = await database;
+    return await db.insert('products', product.toMap());
+  }
+
+// Retrieve all products
+  Future<List<Product>> getProducts() async {
+    final db = await database;
+    final List<Map<String, dynamic>> maps = await db.query('products');
+
+    return List.generate(maps.length, (i) {
+      return Product.fromMap(maps[i]);
+    });
+  }
+
+// Update a product
+  Future<int> updateProduct(Product product) async {
+    final db = await database;
+    return await db.update(
+      'products',
+      product.toMap(),
+      where: 'id = ?',
+      whereArgs: [product.id],
+    );
+  }
+
+// Delete a product
+  Future<int> deleteProduct(int id) async {
+    final db = await database;
+    return await db.delete(
+      'products',
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
+  // Add a new review
+  Future<int> insertReview(Review review) async {
+    final db = await database;
+    return await db.insert('reviews', review.toMap());
+  }
+
+// Retrieve all reviews
+  Future<List<Review>> getReviews() async {
+    final db = await database;
+    final List<Map<String, dynamic>> maps = await db.query('reviews');
+
+    return List.generate(maps.length, (i) {
+      return Review.fromMap(maps[i]);
+    });
+  }
+
+// Update a review
+  Future<int> updateReview(Review review) async {
+    final db = await database;
+    return await db.update(
+      'reviews',
+      review.toMap(),
+      where: 'id = ?',
+      whereArgs: [review.id],
+    );
+  }
+
+// Delete a review
+  Future<int> deleteReview(int id) async {
+    final db = await database;
+    return await db.delete(
+      'reviews',
+      where: 'id = ?',
+      whereArgs: [id],
+    );
   }
 }

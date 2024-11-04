@@ -1,0 +1,1 @@
+ /Users/lixiyan/E-Commerce-App/.dart_tool/flutter_build/8986065c1b6a44d6fac8e4bda7259c20/native_assets.yaml: 
