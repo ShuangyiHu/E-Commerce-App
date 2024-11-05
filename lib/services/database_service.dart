@@ -202,6 +202,21 @@ class DatabaseService {
   ''');
   }
 
+// Fetch products by category ID
+  Future<List<Product>> getProductsByCategory(int categoryId) async {
+    final db = await database;
+
+    final List<Map<String, dynamic>> maps = await db.query(
+      'products',
+      where: 'category_id = ?',
+      whereArgs: [categoryId],
+    );
+
+    return List.generate(maps.length, (i) {
+      return Product.fromMap(maps[i]);
+    });
+  }
+
   // Add a new review
   Future<int> insertReview(Review review) async {
     final db = await database;

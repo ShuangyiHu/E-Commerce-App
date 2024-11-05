@@ -34,13 +34,14 @@ class Product {
   factory Product.fromMap(Map<String, dynamic> map) {
     return Product(
       id: map['id'],
-      name: map['name'],
-      description: map['description'],
-      price: map['price'],
-      categoryId: map['category_id'], // Retrieve categoryId
-      imageUrl: map['image_url'],
-      stockQuantity: map['stock_quantity'],
-      categoryName: map['categoryName'], // Retrieve categoryName
+      name: map['name'] ?? '', // Provide a default empty string if null
+      description: map['description'] ?? '',
+      price: map['price'] ?? 0.0,
+      categoryId: map['category_id'],
+      imageUrl: map['image_url'] ?? '',
+      stockQuantity: map['stock_quantity'] ?? 0,
+      categoryName:
+          map['categoryName'] ?? '', // Ensure this is handled if it's nullable
     );
   }
 
