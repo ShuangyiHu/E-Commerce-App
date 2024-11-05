@@ -13,16 +13,38 @@ class _ProductPageState extends State<ProductPage> {
   List<Product> products = [];
   List<model.Category> categories = [];
   model.Category? selectedCategory;
+  TextEditingController searchController = TextEditingController();
+  String orderBy = 'name';
+  bool descending = false; // Default to ascending order
+  String searchText = "";
 
   @override
   void initState() {
     super.initState();
     _loadProducts();
     _loadCategories();
+    searchController.addListener(_onSearchChanged);
+  }
+
+  @override
+  void dispose() {
+    searchController.removeListener(_onSearchChanged);
+    searchController.dispose();
+    super.dispose();
+  }
+
+  void _onSearchChanged() {
+    searchText = searchController.text;
+    _loadProducts();
   }
 
   Future<void> _loadProducts() async {
-    final productMaps = await dbService.getProductsWithCategoryNames();
+    final productMaps = await dbService.getProductsWithCategoryNames(
+      categoryId: selectedCategory?.id,
+      searchText: searchText,
+      orderBy: orderBy,
+      descending: descending,
+    );
     products = productMaps.map((map) {
       return Product(
         id: map['id'],
@@ -43,8 +65,29 @@ class _ProductPageState extends State<ProductPage> {
     setState(() {});
   }
 
-  void _addProduct(String name, String description, double price,
-      int categoryId, String categoryName) async {
+  void _onCategoryFilterChanged(model.Category? category) {
+    setState(() {
+      selectedCategory = category;
+      _loadProducts();
+    });
+  }
+
+  void _onSortOptionChanged(String value) {
+    setState(() {
+      if (orderBy == value) {
+        // If the same sort option is selected, toggle ascending/descending
+        descending = !descending;
+      } else {
+        // If a new sort option is selected, set it to ascending by default
+        orderBy = value;
+        descending = false;
+      }
+      _loadProducts();
+    });
+  }
+
+  void addProduct(String name, String description, double price, int categoryId,
+      String categoryName) async {
     await dbService.insertProduct(Product(
       name: name,
       description: description,
@@ -57,20 +100,20 @@ class _ProductPageState extends State<ProductPage> {
     _loadProducts();
   }
 
-  void _updateProduct(Product product) async {
+  void updateProduct(Product product) async {
     await dbService.updateProduct(product);
     _loadProducts();
   }
 
-  void _deleteProduct(int id) async {
-    bool confirmed = await _showDeleteConfirmationDialog();
+  void deleteProduct(int id) async {
+    bool confirmed = await showDeleteConfirmationDialog();
     if (confirmed) {
       await dbService.deleteProduct(id);
       _loadProducts();
     }
   }
 
-  Future<bool> _showDeleteConfirmationDialog() async {
+  Future<bool> showDeleteConfirmationDialog() async {
     return await showDialog(
           context: context,
           builder: (context) => AlertDialog(
@@ -91,7 +134,7 @@ class _ProductPageState extends State<ProductPage> {
         false;
   }
 
-  void _showAddProductDialog() {
+  void showAddProductDialog() {
     TextEditingController nameController = TextEditingController();
     TextEditingController descriptionController = TextEditingController();
     TextEditingController priceController = TextEditingController();
@@ -151,7 +194,7 @@ class _ProductPageState extends State<ProductPage> {
                     final price = double.tryParse(priceController.text) ?? 0.0;
 
                     if (name.isNotEmpty && selectedCategory != null) {
-                      _addProduct(name, description, price,
+                      addProduct(name, description, price,
                           selectedCategory!.id!, selectedCategory!.name);
                       Navigator.of(context).pop();
                     }
@@ -166,7 +209,7 @@ class _ProductPageState extends State<ProductPage> {
     );
   }
 
-  void _showEditProductDialog(Product product) {
+  void showEditProductDialog(Product product) {
     TextEditingController nameController =
         TextEditingController(text: product.name);
     TextEditingController descriptionController =
@@ -230,7 +273,7 @@ class _ProductPageState extends State<ProductPage> {
                     final price = double.tryParse(priceController.text) ?? 0.0;
 
                     if (name.isNotEmpty && selectedCategory != null) {
-                      _updateProduct(product.copyWith(
+                      updateProduct(product.copyWith(
                         name: name,
                         description: description,
                         price: price,
@@ -252,41 +295,100 @@ class _ProductPageState extends State<ProductPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text("Products")),
-      body: ListView.builder(
-        itemCount: products.length,
-        itemBuilder: (context, index) {
-          final product = products[index];
-          return ListTile(
-            title: Text("${index + 1}. ${product.name}"),
-            subtitle: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+      appBar: AppBar(
+        title: Text("Products"),
+      ),
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: TextField(
+              controller: searchController,
+              decoration: InputDecoration(
+                labelText: "Search by name",
+                prefixIcon: Icon(Icons.search),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8.0),
+            child: Row(
               children: [
-                Text(
-                    "Description: ${product.description.isEmpty ? '--' : product.description}"),
-                Text("Price: \$${product.price.toStringAsFixed(2)}"),
-                Text(
-                    "Category: ${product.categoryId} (${product.categoryName})"),
+                Expanded(
+                  child: DropdownButton<model.Category?>(
+                    value: selectedCategory,
+                    hint: Text("All Categories"),
+                    isExpanded: true,
+                    onChanged: _onCategoryFilterChanged,
+                    items: [
+                      DropdownMenuItem(
+                        value: null,
+                        child: Text("All Categories"),
+                      ),
+                      ...categories.map((category) {
+                        return DropdownMenuItem(
+                          value: category,
+                          child: Text(category.name),
+                        );
+                      }).toList(),
+                    ],
+                  ),
+                ),
+                PopupMenuButton<String>(
+                  icon: Icon(Icons.sort),
+                  onSelected: _onSortOptionChanged,
+                  itemBuilder: (context) => [
+                    PopupMenuItem(value: 'name', child: Text('Sort by Name')),
+                    PopupMenuItem(value: 'price', child: Text('Sort by Price')),
+                  ],
+                ),
               ],
             ),
-            trailing: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                IconButton(
-                  icon: Icon(Icons.edit),
-                  onPressed: () => _showEditProductDialog(product),
-                ),
-                IconButton(
-                  icon: Icon(Icons.delete),
-                  onPressed: () => _deleteProduct(product.id!),
-                ),
-              ],
-            ),
-          );
-        },
+          ),
+          Expanded(
+            child: products.isEmpty
+                ? Center(child: Text("No products found"))
+                : ListView.builder(
+                    itemCount: products.length,
+                    itemBuilder: (context, index) {
+                      final product = products[index];
+                      return ListTile(
+                        title: Text("ID: ${product.id}. ${product.name}"),
+                        subtitle: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                                "Description: ${product.description.isEmpty ? '--' : product.description}"),
+                            Text(
+                                "Price: \$${product.price.toStringAsFixed(2)}"),
+                            Text(
+                                "Category: ${product.categoryId} (${product.categoryName})"),
+                          ],
+                        ),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            IconButton(
+                              icon: Icon(Icons.edit),
+                              onPressed: () => showEditProductDialog(product),
+                            ),
+                            IconButton(
+                              icon: Icon(Icons.delete),
+                              onPressed: () => deleteProduct(product.id!),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+          ),
+        ],
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: _showAddProductDialog,
+        onPressed: showAddProductDialog,
         child: Icon(Icons.add),
       ),
     );

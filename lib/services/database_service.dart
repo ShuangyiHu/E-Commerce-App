@@ -193,13 +193,60 @@ class DatabaseService {
     );
   }
 
-  Future<List<Map<String, dynamic>>> getProductsWithCategoryNames() async {
+  // Future<List<Map<String, dynamic>>> getProductsWithCategoryNames(
+  //     {int? categoryId,
+  //     required String searchText,
+  //     required String orderBy,
+  //     required bool descending}) async {
+  //   final db = await database;
+  //   return await db.rawQuery('''
+  //   SELECT products.*, categories.name AS categoryName
+  //   FROM products
+  //   JOIN categories ON products.category_id = categories.id
+  // ''');
+  // }
+
+  Future<List<Map<String, dynamic>>> getProductsWithCategoryNames({
+    int? categoryId,
+    String searchText = '',
+    String orderBy = 'name',
+    bool descending = false,
+  }) async {
     final db = await database;
-    return await db.rawQuery('''
+
+    // Start with the base query
+    String query = '''
     SELECT products.*, categories.name AS categoryName
     FROM products
     JOIN categories ON products.category_id = categories.id
-  ''');
+  ''';
+
+    // Initialize a list to hold the WHERE clauses
+    List<String> conditions = [];
+    List<dynamic> args = [];
+
+    // Add filter for categoryId if provided
+    if (categoryId != null) {
+      conditions.add('products.category_id = ?');
+      args.add(categoryId);
+    }
+
+    // Add search text if provided
+    if (searchText.isNotEmpty) {
+      conditions.add('products.name LIKE ?');
+      args.add('%$searchText%');
+    }
+
+    // If there are any conditions, add them to the query
+    if (conditions.isNotEmpty) {
+      query += ' WHERE ' + conditions.join(' AND ');
+    }
+
+    // Add ordering
+    query += ' ORDER BY $orderBy ${descending ? 'DESC' : 'ASC'}';
+
+    // Execute the query
+    return await db.rawQuery(query, args);
   }
 
 // Fetch products by category ID

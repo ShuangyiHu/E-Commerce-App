@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'dart:async';
 import '../services/database_service.dart';
 import '../models/category.dart';
+import '../models/product.dart';
 
 class CategoryPage extends StatefulWidget {
   @override
@@ -11,12 +12,13 @@ class CategoryPage extends StatefulWidget {
 class _CategoryPageState extends State<CategoryPage> {
   final DatabaseService dbService = DatabaseService();
   List<Category> categories = [];
+  List<Product> products = [];
   TextEditingController searchController = TextEditingController();
   Timer? _debounce;
-  String searchField = 'name';
-  String orderBy = 'name';
+  String orderBy = 'name'; // default sorting by name
   bool descending = false;
   bool isLoading = false;
+  bool showProducts = false; // Flag to toggle product view
 
   @override
   void initState() {
@@ -42,19 +44,21 @@ class _CategoryPageState extends State<CategoryPage> {
   Future<void> _loadCategories() async {
     setState(() => isLoading = true);
     try {
-      if (searchController.text.isEmpty) {
-        categories = await dbService.fetchAllCategories(
-          orderBy: orderBy,
-          descending: descending,
-        );
-      } else {
-        categories = await dbService.searchCategories(
-          searchText: searchController.text,
-          searchField: searchField,
-          orderBy: orderBy,
-          descending: descending,
-        );
-      }
+      categories = await dbService.searchCategories(
+        searchText: searchController.text,
+        orderBy: orderBy,
+        descending: descending,
+      );
+    } finally {
+      setState(() => isLoading = false);
+    }
+  }
+
+  Future<void> _loadProducts(int categoryId) async {
+    setState(() => isLoading = true);
+    try {
+      products = await dbService.getProductsByCategory(categoryId);
+      showProducts = true; // Toggle to show products
     } finally {
       setState(() => isLoading = false);
     }
@@ -204,104 +208,125 @@ class _CategoryPageState extends State<CategoryPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Categories'),
-        bottom: PreferredSize(
-          preferredSize: Size.fromHeight(80),
-          child: Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: searchController,
-                    decoration: InputDecoration(
-                      hintText: 'Search categories...',
-                      prefixIcon: Icon(Icons.search),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      filled: true,
-                      fillColor: Colors.white,
+    return WillPopScope(
+      onWillPop: () async {
+        if (showProducts) {
+          setState(() {
+            showProducts = false;
+          });
+          return false;
+        }
+        return true;
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(showProducts ? 'Products' : 'Categories'),
+          bottom: showProducts
+              ? null
+              : PreferredSize(
+                  preferredSize: Size.fromHeight(80),
+                  child: Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: searchController,
+                            decoration: InputDecoration(
+                              hintText: 'Search categories...',
+                              prefixIcon: Icon(Icons.search),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              filled: true,
+                              fillColor: Colors.white,
+                            ),
+                          ),
+                        ),
+                        PopupMenuButton<String>(
+                          icon: Icon(Icons.sort),
+                          onSelected: (value) {
+                            setState(() {
+                              if (orderBy == value) {
+                                descending = !descending;
+                              } else {
+                                orderBy = value;
+                                descending = false;
+                              }
+                              _loadCategories();
+                            });
+                          },
+                          itemBuilder: (context) => [
+                            PopupMenuItem(
+                                value: 'name', child: Text('Sort by Name')),
+                            PopupMenuItem(
+                                value: 'id', child: Text('Sort by ID')),
+                          ],
+                        ),
+                      ],
                     ),
                   ),
                 ),
-                PopupMenuButton<String>(
-                  icon: Icon(Icons.filter_list),
-                  onSelected: (value) {
-                    setState(() {
-                      searchField = value;
-                      _loadCategories();
-                    });
-                  },
-                  itemBuilder: (context) => [
-                    PopupMenuItem(value: 'name', child: Text('Search in Name')),
-                    PopupMenuItem(
-                        value: 'description',
-                        child: Text('Search in Description')),
-                  ],
-                ),
-                PopupMenuButton<String>(
-                  icon: Icon(Icons.sort),
-                  onSelected: (value) {
-                    setState(() {
-                      if (orderBy == value) {
-                        descending = !descending;
-                      } else {
-                        orderBy = value;
-                        descending = false;
-                      }
-                      _loadCategories();
-                    });
-                  },
-                  itemBuilder: (context) => [
-                    PopupMenuItem(value: 'name', child: Text('Sort by Name')),
-                    PopupMenuItem(value: 'id', child: Text('Sort by ID')),
-                  ],
-                ),
-              ],
-            ),
-          ),
         ),
-      ),
-      body: isLoading
-          ? Center(child: CircularProgressIndicator())
-          : categories.isEmpty
-              ? Center(
-                  child: Text(
-                    searchController.text.isEmpty
-                        ? 'No categories found'
-                        : 'No matching categories',
-                    style: TextStyle(fontSize: 16),
-                  ),
-                )
-              : ListView.builder(
-                  itemCount: categories.length,
-                  itemBuilder: (context, index) {
-                    final category = categories[index];
-                    return ListTile(
-                      title: Text("${category.id}. ${category.name}"),
-                      subtitle: Text(category.description),
-                      trailing: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          IconButton(
-                            icon: Icon(Icons.edit),
-                            onPressed: () => _showEditCategoryDialog(category),
-                          ),
-                          IconButton(
-                            icon: Icon(Icons.delete),
-                            onPressed: () => _showDeleteConfirmation(category),
-                          ),
-                        ],
+        body: isLoading
+            ? Center(child: CircularProgressIndicator())
+            : showProducts
+                ? products.isEmpty
+                    ? Center(
+                        child: Text("No products found for this category."))
+                    : ListView.builder(
+                        itemCount: products.length,
+                        itemBuilder: (context, index) {
+                          final product = products[index];
+                          return ListTile(
+                            title: Text("ID: ${product.id} - ${product.name}"),
+                            subtitle: Text(
+                                "Price: \$${product.price.toStringAsFixed(2)}"),
+                          );
+                        },
+                      )
+                : categories.isEmpty
+                    ? Center(
+                        child: Text(
+                          searchController.text.isEmpty
+                              ? 'No categories found'
+                              : 'No matching categories',
+                          style: TextStyle(fontSize: 16),
+                        ),
+                      )
+                    : ListView.builder(
+                        itemCount: categories.length,
+                        itemBuilder: (context, index) {
+                          final category = categories[index];
+                          return ListTile(
+                            title: Text("${category.id}. ${category.name}"),
+                            subtitle: Text(category.description),
+                            onTap: () {
+                              _loadProducts(category
+                                  .id!); // Load products for selected category
+                            },
+                            trailing: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                IconButton(
+                                  icon: Icon(Icons.edit),
+                                  onPressed: () =>
+                                      _showEditCategoryDialog(category),
+                                ),
+                                IconButton(
+                                  icon: Icon(Icons.delete),
+                                  onPressed: () =>
+                                      _showDeleteConfirmation(category),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
                       ),
-                    );
-                  },
-                ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _showAddCategoryDialog,
-        child: Icon(Icons.add),
+        floatingActionButton: FloatingActionButton(
+          onPressed: _showAddCategoryDialog,
+          child: Icon(Icons.add),
+        ),
       ),
     );
   }
