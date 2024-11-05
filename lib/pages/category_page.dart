@@ -43,7 +43,10 @@ class _CategoryPageState extends State<CategoryPage> {
     setState(() => isLoading = true);
     try {
       if (searchController.text.isEmpty) {
-        categories = await dbService.getCategories();
+        categories = await dbService.fetchAllCategories(
+          orderBy: orderBy,
+          descending: descending,
+        );
       } else {
         categories = await dbService.searchCategories(
           searchText: searchController.text,
@@ -58,7 +61,8 @@ class _CategoryPageState extends State<CategoryPage> {
   }
 
   void _addCategory(String name, String description) async {
-    await dbService.insertCategory(Category(name: name, description: description));
+    await dbService
+        .insertCategory(Category(name: name, description: description));
     _loadCategories();
   }
 
@@ -184,6 +188,7 @@ class _CategoryPageState extends State<CategoryPage> {
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
+              foregroundColor: Colors.white,
               backgroundColor: Colors.red,
             ),
             onPressed: () {
@@ -232,7 +237,9 @@ class _CategoryPageState extends State<CategoryPage> {
                   },
                   itemBuilder: (context) => [
                     PopupMenuItem(value: 'name', child: Text('Search in Name')),
-                    PopupMenuItem(value: 'description', child: Text('Search in Description')),
+                    PopupMenuItem(
+                        value: 'description',
+                        child: Text('Search in Description')),
                   ],
                 ),
                 PopupMenuButton<String>(
@@ -274,7 +281,7 @@ class _CategoryPageState extends State<CategoryPage> {
                   itemBuilder: (context, index) {
                     final category = categories[index];
                     return ListTile(
-                      title: Text(category.name),
+                      title: Text("${category.id}. ${category.name}"),
                       subtitle: Text(category.description),
                       trailing: Row(
                         mainAxisSize: MainAxisSize.min,

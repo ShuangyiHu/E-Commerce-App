@@ -17,7 +17,7 @@ class DatabaseService {
   // Initialize database
   Future<Database> _initDatabase() async {
     String path = join(await getDatabasesPath(), 'ecommerce.db');
-    
+
     return await openDatabase(
       path,
       version: 1,
@@ -51,7 +51,8 @@ class DatabaseService {
       )
     ''');
     await db.execute('CREATE INDEX idx_product_name ON products(name)');
-    await db.execute('CREATE INDEX idx_product_category ON products(category_id)');
+    await db
+        .execute('CREATE INDEX idx_product_category ON products(category_id)');
 
     // Create reviews table with index on product_id
     await db.execute('''
@@ -80,9 +81,18 @@ class DatabaseService {
   }
 
   // Retrieve all categories
-  Future<List<Category>> getCategories() async {
+  Future<List<Category>> fetchAllCategories({
+    String orderBy = 'name',
+    bool descending = false,
+  }) async {
     final db = await database;
-    final List<Map<String, dynamic>> maps = await db.query('categories');
+    String orderClause = '$orderBy ${descending ? 'DESC' : 'ASC'}';
+
+    final List<Map<String, dynamic>> maps = await db.query(
+      'categories',
+      orderBy: orderClause,
+    );
+
     return List.generate(maps.length, (i) {
       return Category.fromMap(maps[i]);
     });
@@ -98,7 +108,7 @@ class DatabaseService {
     final db = await database;
     String? whereClause;
     List<dynamic>? whereArgs;
-    String orderByClause = orderBy != null 
+    String orderByClause = orderBy != null
         ? '$orderBy ${descending ? 'DESC' : 'ASC'}'
         : 'name ASC';
 
@@ -144,6 +154,15 @@ class DatabaseService {
     return await db.insert('products', product.toMap());
   }
 
+  // // Retrieve all categories
+  // Future<List<Category>> getCategories() async {
+  //   final db = await database;
+  //   final List<Map<String, dynamic>> maps = await db.query('categories');
+  //   return List.generate(maps.length, (i) {
+  //     return Category.fromMap(maps[i]);
+  //   });
+  // }
+
   // Retrieve all products
   Future<List<Product>> getProducts() async {
     final db = await database;
@@ -172,6 +191,15 @@ class DatabaseService {
       where: 'id = ?',
       whereArgs: [id],
     );
+  }
+
+  Future<List<Map<String, dynamic>>> getProductsWithCategoryNames() async {
+    final db = await database;
+    return await db.rawQuery('''
+    SELECT products.*, categories.name AS categoryName
+    FROM products
+    JOIN categories ON products.category_id = categories.id
+  ''');
   }
 
   // Add a new review
