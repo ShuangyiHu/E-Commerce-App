@@ -11,11 +11,14 @@ class ProductPage extends StatefulWidget {
 class _ProductPageState extends State<ProductPage> {
   final DatabaseService dbService = DatabaseService();
   List<Product> products = [];
+  List<model.Category> categories = [];
+  model.Category? selectedCategory;
 
   @override
   void initState() {
     super.initState();
     _loadProducts();
+    _loadCategories();
   }
 
   Future<void> _loadProducts() async {
@@ -35,6 +38,11 @@ class _ProductPageState extends State<ProductPage> {
     setState(() {});
   }
 
+  Future<void> _loadCategories() async {
+    categories = await dbService.fetchAllCategories();
+    setState(() {});
+  }
+
   void _addProduct(String name, String description, double price,
       int categoryId, String categoryName) async {
     await dbService.insertProduct(Product(
@@ -42,9 +50,9 @@ class _ProductPageState extends State<ProductPage> {
       description: description,
       price: price,
       categoryId: categoryId,
-      categoryName: categoryName,
       imageUrl: '',
       stockQuantity: 10,
+      categoryName: categoryName,
     ));
     _loadProducts();
   }
@@ -55,104 +63,189 @@ class _ProductPageState extends State<ProductPage> {
   }
 
   void _deleteProduct(int id) async {
-    await dbService.deleteProduct(id);
-    _loadProducts();
+    bool confirmed = await _showDeleteConfirmationDialog();
+    if (confirmed) {
+      await dbService.deleteProduct(id);
+      _loadProducts();
+    }
   }
 
-  void _showEditProductDialog(Product product) {
-    final nameController = TextEditingController(text: product.name);
-    final descController = TextEditingController(text: product.description);
-    final priceController =
-        TextEditingController(text: product.price.toString());
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Edit Product'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: nameController,
-                decoration: InputDecoration(
-                  labelText: 'Name',
-                  border: OutlineInputBorder(),
-                ),
+  Future<bool> _showDeleteConfirmationDialog() async {
+    return await showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: Text('Delete Product'),
+            content: Text('Are you sure you want to delete this product?'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: Text('Cancel'),
               ),
-              SizedBox(height: 8),
-              TextField(
-                controller: descController,
-                decoration: InputDecoration(
-                  labelText: 'Description',
-                  border: OutlineInputBorder(),
-                ),
-              ),
-              SizedBox(height: 8),
-              TextField(
-                controller: priceController,
-                decoration: InputDecoration(
-                  labelText: 'Price',
-                  border: OutlineInputBorder(),
-                ),
-                keyboardType: TextInputType.number,
+              ElevatedButton(
+                onPressed: () => Navigator.of(context).pop(true),
+                child: Text('Delete'),
               ),
             ],
           ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              final name = nameController.text;
-              final description = descController.text;
-              final price = double.tryParse(priceController.text) ?? 0.0;
+        ) ??
+        false;
+  }
 
-              if (name.isNotEmpty) {
-                _updateProduct(
-                  product.copyWith(
-                    name: name,
-                    description: description,
-                    price: price,
-                  ),
-                );
-                Navigator.of(context).pop();
-              }
-            },
-            child: Text('Save'),
-          ),
-        ],
-      ),
+  void _showAddProductDialog() {
+    TextEditingController nameController = TextEditingController();
+    TextEditingController descriptionController = TextEditingController();
+    TextEditingController priceController = TextEditingController();
+    model.Category? selectedCategory;
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: Text("Add Product"),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextField(
+                      controller: nameController,
+                      decoration: InputDecoration(labelText: "Name"),
+                    ),
+                    TextField(
+                      controller: descriptionController,
+                      decoration: InputDecoration(labelText: "Description"),
+                    ),
+                    TextField(
+                      controller: priceController,
+                      decoration: InputDecoration(labelText: "Price"),
+                      keyboardType: TextInputType.number,
+                    ),
+                    DropdownButtonFormField<model.Category>(
+                      value: selectedCategory,
+                      items: categories.map((category) {
+                        return DropdownMenuItem<model.Category>(
+                          value: category,
+                          child: Text(category.name),
+                        );
+                      }).toList(),
+                      onChanged: (newCategory) {
+                        setState(() {
+                          selectedCategory = newCategory;
+                        });
+                      },
+                      decoration: InputDecoration(labelText: "Category"),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: Text("Cancel"),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    final name = nameController.text;
+                    final description = descriptionController.text;
+                    final price = double.tryParse(priceController.text) ?? 0.0;
+
+                    if (name.isNotEmpty && selectedCategory != null) {
+                      _addProduct(name, description, price,
+                          selectedCategory!.id!, selectedCategory!.name);
+                      Navigator.of(context).pop();
+                    }
+                  },
+                  child: Text("Add"),
+                ),
+              ],
+            );
+          },
+        );
+      },
     );
   }
 
-  void _showDeleteConfirmationDialog(Product product) {
+  void _showEditProductDialog(Product product) {
+    TextEditingController nameController =
+        TextEditingController(text: product.name);
+    TextEditingController descriptionController =
+        TextEditingController(text: product.description);
+    TextEditingController priceController =
+        TextEditingController(text: product.price.toString());
+    selectedCategory =
+        categories.firstWhere((category) => category.id == product.categoryId);
+
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Delete Product'),
-        content: Text('Are you sure you want to delete "${product.name}"?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(), // Dismiss the dialog
-            child: Text('Cancel'),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              foregroundColor: Colors.white,
-              backgroundColor: Colors.red, // Set the button color to red
-            ),
-            onPressed: () {
-              _deleteProduct(product.id!); // Call the delete function
-              Navigator.of(context).pop(); // Dismiss the dialog
-            },
-            child: Text('Delete'),
-          ),
-        ],
-      ),
+      builder: (BuildContext context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: Text("Edit Product"),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextField(
+                      controller: nameController,
+                      decoration: InputDecoration(labelText: "Name"),
+                    ),
+                    TextField(
+                      controller: descriptionController,
+                      decoration: InputDecoration(labelText: "Description"),
+                    ),
+                    TextField(
+                      controller: priceController,
+                      decoration: InputDecoration(labelText: "Price"),
+                      keyboardType: TextInputType.number,
+                    ),
+                    DropdownButtonFormField<model.Category>(
+                      value: selectedCategory,
+                      items: categories.map((category) {
+                        return DropdownMenuItem<model.Category>(
+                          value: category,
+                          child: Text(category.name),
+                        );
+                      }).toList(),
+                      onChanged: (newCategory) {
+                        setState(() {
+                          selectedCategory = newCategory;
+                        });
+                      },
+                      decoration: InputDecoration(labelText: "Category"),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: Text("Cancel"),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    final name = nameController.text;
+                    final description = descriptionController.text;
+                    final price = double.tryParse(priceController.text) ?? 0.0;
+
+                    if (name.isNotEmpty && selectedCategory != null) {
+                      _updateProduct(product.copyWith(
+                        name: name,
+                        description: description,
+                        price: price,
+                        categoryId: selectedCategory!.id!,
+                      ));
+                      Navigator.of(context).pop();
+                    }
+                  },
+                  child: Text("Save"),
+                ),
+              ],
+            );
+          },
+        );
+      },
     );
   }
 
@@ -170,7 +263,7 @@ class _ProductPageState extends State<ProductPage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                    "Description: ${product.description == "" ? '--' : product.description}"),
+                    "Description: ${product.description.isEmpty ? '--' : product.description}"),
                 Text("Price: \$${product.price.toStringAsFixed(2)}"),
                 Text(
                     "Category: ${product.categoryId} (${product.categoryName})"),
@@ -181,13 +274,11 @@ class _ProductPageState extends State<ProductPage> {
               children: [
                 IconButton(
                   icon: Icon(Icons.edit),
-                  onPressed: () {
-                    _showEditProductDialog(product);
-                  },
+                  onPressed: () => _showEditProductDialog(product),
                 ),
                 IconButton(
                   icon: Icon(Icons.delete),
-                  onPressed: () => _showDeleteConfirmationDialog(product),
+                  onPressed: () => _deleteProduct(product.id!),
                 ),
               ],
             ),
@@ -195,9 +286,7 @@ class _ProductPageState extends State<ProductPage> {
         },
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          // Add product dialog or function call here
-        },
+        onPressed: _showAddProductDialog,
         child: Icon(Icons.add),
       ),
     );
