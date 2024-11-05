@@ -3,7 +3,8 @@ import 'pages/category_page.dart';
 import 'pages/product_page.dart';
 import 'pages/review_page.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();  // Add this line
   runApp(const MyApp());
 }
 

@@ -16,10 +16,8 @@ class DatabaseService {
 
   // Initialize database
   Future<Database> _initDatabase() async {
-    // Get the default database path
     String path = join(await getDatabasesPath(), 'ecommerce.db');
-
-    // Open/create the database
+    
     return await openDatabase(
       path,
       version: 1,
@@ -53,8 +51,7 @@ class DatabaseService {
       )
     ''');
     await db.execute('CREATE INDEX idx_product_name ON products(name)');
-    await db
-        .execute('CREATE INDEX idx_product_category ON products(category_id)');
+    await db.execute('CREATE INDEX idx_product_category ON products(category_id)');
 
     // Create reviews table with index on product_id
     await db.execute('''
@@ -82,17 +79,45 @@ class DatabaseService {
     return await db.insert('categories', category.toMap());
   }
 
-// Retrieve all categories
+  // Retrieve all categories
   Future<List<Category>> getCategories() async {
     final db = await database;
     final List<Map<String, dynamic>> maps = await db.query('categories');
-
     return List.generate(maps.length, (i) {
       return Category.fromMap(maps[i]);
     });
   }
 
-// Update a category
+  // Search categories with filtering and sorting
+  Future<List<Category>> searchCategories({
+    String? searchText,
+    String? searchField = 'name',
+    String? orderBy = 'name',
+    bool descending = false,
+  }) async {
+    final db = await database;
+    String? whereClause;
+    List<dynamic>? whereArgs;
+    String orderByClause = orderBy != null 
+        ? '$orderBy ${descending ? 'DESC' : 'ASC'}'
+        : 'name ASC';
+
+    if (searchText != null && searchText.isNotEmpty && searchField != null) {
+      whereClause = '$searchField LIKE ?';
+      whereArgs = ['%$searchText%'];
+    }
+
+    final List<Map<String, dynamic>> maps = await db.query(
+      'categories',
+      where: whereClause,
+      whereArgs: whereArgs,
+      orderBy: orderByClause,
+    );
+
+    return List.generate(maps.length, (i) => Category.fromMap(maps[i]));
+  }
+
+  // Update a category
   Future<int> updateCategory(Category category) async {
     final db = await database;
     return await db.update(
@@ -103,7 +128,7 @@ class DatabaseService {
     );
   }
 
-// Delete a category
+  // Delete a category
   Future<int> deleteCategory(int id) async {
     final db = await database;
     return await db.delete(
@@ -119,17 +144,16 @@ class DatabaseService {
     return await db.insert('products', product.toMap());
   }
 
-// Retrieve all products
+  // Retrieve all products
   Future<List<Product>> getProducts() async {
     final db = await database;
     final List<Map<String, dynamic>> maps = await db.query('products');
-
     return List.generate(maps.length, (i) {
       return Product.fromMap(maps[i]);
     });
   }
 
-// Update a product
+  // Update a product
   Future<int> updateProduct(Product product) async {
     final db = await database;
     return await db.update(
@@ -140,7 +164,7 @@ class DatabaseService {
     );
   }
 
-// Delete a product
+  // Delete a product
   Future<int> deleteProduct(int id) async {
     final db = await database;
     return await db.delete(
@@ -156,17 +180,16 @@ class DatabaseService {
     return await db.insert('reviews', review.toMap());
   }
 
-// Retrieve all reviews
+  // Retrieve all reviews
   Future<List<Review>> getReviews() async {
     final db = await database;
     final List<Map<String, dynamic>> maps = await db.query('reviews');
-
     return List.generate(maps.length, (i) {
       return Review.fromMap(maps[i]);
     });
   }
 
-// Update a review
+  // Update a review
   Future<int> updateReview(Review review) async {
     final db = await database;
     return await db.update(
@@ -177,7 +200,7 @@ class DatabaseService {
     );
   }
 
-// Delete a review
+  // Delete a review
   Future<int> deleteReview(int id) async {
     final db = await database;
     return await db.delete(
