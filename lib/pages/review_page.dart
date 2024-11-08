@@ -52,18 +52,17 @@ class _ReviewPageState extends State<ReviewPage> {
         content: Text('Are you sure you want to delete this review?'),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(context).pop(), // Dismiss the dialog
+            onPressed: () => Navigator.of(context).pop(),
             child: Text('Cancel'),
           ),
           ElevatedButton(
             onPressed: () {
-              _deleteReview(review.id!); // Call delete function
-              Navigator.of(context).pop(); // Close the dialog
+              _deleteReview(review.id!);
+              Navigator.of(context).pop();
             },
             style: ElevatedButton.styleFrom(
               foregroundColor: Colors.white,
-              backgroundColor:
-                  Colors.red, // Optional: red color for delete button
+              backgroundColor: Colors.red,
             ),
             child: Text('Delete'),
           ),
@@ -92,7 +91,6 @@ class _ReviewPageState extends State<ReviewPage> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    // Category Dropdown
                     DropdownButtonFormField<Category>(
                       value: selectedCategory,
                       items: categories.map((category) {
@@ -104,21 +102,17 @@ class _ReviewPageState extends State<ReviewPage> {
                       onChanged: (newCategory) async {
                         setState(() {
                           selectedCategory = newCategory;
-                          selectedProduct = null; // Reset selected product
+                          selectedProduct = null;
                         });
 
-                        // Fetch products for the selected category
                         if (selectedCategory != null) {
                           products = await dbService
                               .getProductsByCategory(selectedCategory!.id!);
-                          setState(
-                              () {}); // Update state after fetching products
+                          setState(() {});
                         }
                       },
                       decoration: InputDecoration(labelText: "Category"),
                     ),
-
-                    // Product Dropdown
                     DropdownButtonFormField<Product>(
                       value: selectedProduct,
                       items: products.map((product) {
@@ -134,15 +128,11 @@ class _ReviewPageState extends State<ReviewPage> {
                       },
                       decoration: InputDecoration(labelText: "Product"),
                     ),
-
-                    // Rating Input
                     TextField(
                       controller: ratingController,
                       decoration: InputDecoration(labelText: "Rating (1-5)"),
                       keyboardType: TextInputType.number,
                     ),
-
-                    // Comment Input
                     TextField(
                       controller: commentController,
                       decoration: InputDecoration(labelText: "Comment"),
@@ -161,7 +151,6 @@ class _ReviewPageState extends State<ReviewPage> {
                     final rating = int.tryParse(ratingText);
                     final comment = commentController.text;
 
-                    // Check if rating is valid
                     if (rating == null || rating < 1 || rating > 5) {
                       showDialog(
                         context: context,
@@ -178,7 +167,6 @@ class _ReviewPageState extends State<ReviewPage> {
                         ),
                       );
                     } else if (selectedProduct != null) {
-                      // Proceed with adding the review if rating is valid
                       dbService.insertReview(Review(
                         productId: selectedProduct!.id!,
                         rating: rating,
@@ -186,7 +174,7 @@ class _ReviewPageState extends State<ReviewPage> {
                         createdAt: DateTime.now(),
                       ));
                       Navigator.of(context).pop();
-                      _loadReviews(); // Refresh reviews list
+                      _loadReviews();
                     }
                   },
                   child: Text("Add"),
@@ -260,7 +248,6 @@ class _ReviewPageState extends State<ReviewPage> {
                   ),
                 );
               } else {
-                // Proceed to update review if rating is valid
                 _updateReview(
                   review.copyWith(
                     rating: ratingValue,

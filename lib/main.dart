@@ -4,7 +4,7 @@ import 'pages/product_page.dart';
 import 'pages/review_page.dart';
 
 void main() async {
-  WidgetsFlutterBinding.ensureInitialized();  // Add this line
+  WidgetsFlutterBinding.ensureInitialized();
   runApp(const MyApp());
 }
 

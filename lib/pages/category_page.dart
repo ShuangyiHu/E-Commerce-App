@@ -15,10 +15,10 @@ class _CategoryPageState extends State<CategoryPage> {
   List<Product> products = [];
   TextEditingController searchController = TextEditingController();
   Timer? _debounce;
-  String orderBy = 'name'; // default sorting by name
+  String orderBy = 'name';
   bool descending = false;
   bool isLoading = false;
-  bool showProducts = false; // Flag to toggle product view
+  bool showProducts = false;
 
   @override
   void initState() {
@@ -58,7 +58,7 @@ class _CategoryPageState extends State<CategoryPage> {
     setState(() => isLoading = true);
     try {
       products = await dbService.getProductsByCategory(categoryId);
-      showProducts = true; // Toggle to show products
+      showProducts = true;
     } finally {
       setState(() => isLoading = false);
     }
@@ -302,8 +302,7 @@ class _CategoryPageState extends State<CategoryPage> {
                             title: Text("${category.id}. ${category.name}"),
                             subtitle: Text(category.description),
                             onTap: () {
-                              _loadProducts(category
-                                  .id!); // Load products for selected category
+                              _loadProducts(category.id!);
                             },
                             trailing: Row(
                               mainAxisSize: MainAxisSize.min,

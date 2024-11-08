@@ -7,14 +7,12 @@ import '../models/review.dart';
 class DatabaseService {
   static Database? _database;
 
-  // Get database instance
   Future<Database> get database async {
     if (_database != null) return _database!;
     _database = await _initDatabase();
     return _database!;
   }
 
-  // Initialize database
   Future<Database> _initDatabase() async {
     String path = join(await getDatabasesPath(), 'ecommerce.db');
 
@@ -25,9 +23,7 @@ class DatabaseService {
     );
   }
 
-  // Create database tables
   Future<void> _createTables(Database db, int version) async {
-    // Create category table with index on name
     await db.execute('''
       CREATE TABLE categories(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -37,7 +33,6 @@ class DatabaseService {
     ''');
     await db.execute('CREATE INDEX idx_category_name ON categories(name)');
 
-    // Create products table with indexes on name and category_id
     await db.execute('''
       CREATE TABLE products(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -54,7 +49,6 @@ class DatabaseService {
     await db
         .execute('CREATE INDEX idx_product_category ON products(category_id)');
 
-    // Create reviews table with index on product_id
     await db.execute('''
       CREATE TABLE reviews(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -68,19 +62,16 @@ class DatabaseService {
     await db.execute('CREATE INDEX idx_review_product ON reviews(product_id)');
   }
 
-  // Close database
   Future<void> close() async {
     final db = await database;
     db.close();
   }
 
-  // Add a new category
   Future<int> insertCategory(Category category) async {
     final db = await database;
     return await db.insert('categories', category.toMap());
   }
 
-  // Retrieve all categories
   Future<List<Category>> fetchAllCategories({
     String orderBy = 'name',
     bool descending = false,
@@ -98,7 +89,6 @@ class DatabaseService {
     });
   }
 
-  // Search categories with filtering and sorting
   Future<List<Category>> searchCategories({
     String? searchText,
     String? searchField = 'name',
@@ -127,7 +117,6 @@ class DatabaseService {
     return List.generate(maps.length, (i) => Category.fromMap(maps[i]));
   }
 
-  // Update a category
   Future<int> updateCategory(Category category) async {
     final db = await database;
     return await db.update(
@@ -138,7 +127,6 @@ class DatabaseService {
     );
   }
 
-  // Delete a category
   Future<int> deleteCategory(int id) async {
     final db = await database;
     return await db.delete(
@@ -148,22 +136,11 @@ class DatabaseService {
     );
   }
 
-  // Add a new product
   Future<int> insertProduct(Product product) async {
     final db = await database;
     return await db.insert('products', product.toMap());
   }
 
-  // // Retrieve all categories
-  // Future<List<Category>> getCategories() async {
-  //   final db = await database;
-  //   final List<Map<String, dynamic>> maps = await db.query('categories');
-  //   return List.generate(maps.length, (i) {
-  //     return Category.fromMap(maps[i]);
-  //   });
-  // }
-
-  // Retrieve all products
   Future<List<Product>> getProducts() async {
     final db = await database;
     final List<Map<String, dynamic>> maps = await db.query('products');
@@ -172,7 +149,47 @@ class DatabaseService {
     });
   }
 
-  // Update a product
+  Future<List<Map<String, dynamic>>> getPaginatedProductsWithCategoryNames({
+    int? categoryId,
+    String searchText = '',
+    String orderBy = 'name',
+    bool descending = false,
+    required int limit,
+    required int offset,
+  }) async {
+    final db = await database;
+
+    String query = '''
+    SELECT products.*, categories.name AS categoryName
+    FROM products
+    JOIN categories ON products.category_id = categories.id
+    ''';
+
+    List<String> conditions = [];
+    List<dynamic> args = [];
+
+    if (categoryId != null) {
+      conditions.add('products.category_id = ?');
+      args.add(categoryId);
+    }
+
+    if (searchText.isNotEmpty) {
+      conditions.add('products.name LIKE ?');
+      args.add('%$searchText%');
+    }
+
+    if (conditions.isNotEmpty) {
+      query += ' WHERE ' + conditions.join(' AND ');
+    }
+
+    query += ' ORDER BY $orderBy ${descending ? 'DESC' : 'ASC'}';
+    query += ' LIMIT ? OFFSET ?';
+    args.add(limit);
+    args.add(offset);
+
+    return await db.rawQuery(query, args);
+  }
+
   Future<int> updateProduct(Product product) async {
     final db = await database;
     return await db.update(
@@ -183,7 +200,6 @@ class DatabaseService {
     );
   }
 
-  // Delete a product
   Future<int> deleteProduct(int id) async {
     final db = await database;
     return await db.delete(
@@ -193,63 +209,6 @@ class DatabaseService {
     );
   }
 
-  // Future<List<Map<String, dynamic>>> getProductsWithCategoryNames(
-  //     {int? categoryId,
-  //     required String searchText,
-  //     required String orderBy,
-  //     required bool descending}) async {
-  //   final db = await database;
-  //   return await db.rawQuery('''
-  //   SELECT products.*, categories.name AS categoryName
-  //   FROM products
-  //   JOIN categories ON products.category_id = categories.id
-  // ''');
-  // }
-
-  Future<List<Map<String, dynamic>>> getProductsWithCategoryNames({
-    int? categoryId,
-    String searchText = '',
-    String orderBy = 'name',
-    bool descending = false,
-  }) async {
-    final db = await database;
-
-    // Start with the base query
-    String query = '''
-    SELECT products.*, categories.name AS categoryName
-    FROM products
-    JOIN categories ON products.category_id = categories.id
-  ''';
-
-    // Initialize a list to hold the WHERE clauses
-    List<String> conditions = [];
-    List<dynamic> args = [];
-
-    // Add filter for categoryId if provided
-    if (categoryId != null) {
-      conditions.add('products.category_id = ?');
-      args.add(categoryId);
-    }
-
-    // Add search text if provided
-    if (searchText.isNotEmpty) {
-      conditions.add('products.name LIKE ?');
-      args.add('%$searchText%');
-    }
-
-    // If there are any conditions, add them to the query
-    if (conditions.isNotEmpty) {
-      query += ' WHERE ' + conditions.join(' AND ');
-    }
-
-    // Add ordering
-    query += ' ORDER BY $orderBy ${descending ? 'DESC' : 'ASC'}';
-
-    // Execute the query
-    return await db.rawQuery(query, args);
-  }
-
-// Fetch products by category ID
   Future<List<Product>> getProductsByCategory(int categoryId) async {
     final db = await database;
 
@@ -264,13 +223,11 @@ class DatabaseService {
     });
   }
 
-  // Add a new review
   Future<int> insertReview(Review review) async {
     final db = await database;
     return await db.insert('reviews', review.toMap());
   }
 
-  // Retrieve all reviews
   Future<List<Review>> getReviews() async {
     final db = await database;
     final List<Map<String, dynamic>> maps = await db.query('reviews');
@@ -279,7 +236,6 @@ class DatabaseService {
     });
   }
 
-  // Update a review
   Future<int> updateReview(Review review) async {
     final db = await database;
     return await db.update(
@@ -290,7 +246,6 @@ class DatabaseService {
     );
   }
 
-  // Delete a review
   Future<int> deleteReview(int id) async {
     final db = await database;
     return await db.delete(

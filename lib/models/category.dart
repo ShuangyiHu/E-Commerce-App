@@ -9,7 +9,6 @@ class Category {
     required this.description,
   });
 
-  // Convert Category object to a map
   Map<String, dynamic> toMap() {
     return {
       'id': id,
@@ -18,7 +17,6 @@ class Category {
     };
   }
 
-  // Create Category object from a map
   factory Category.fromMap(Map<String, dynamic> map) {
     return Category(
       id: map['id'],
@@ -27,7 +25,6 @@ class Category {
     );
   }
 
-  // Create a copy of Category with optional parameter updates
   Category copyWith({
     int? id,
     String? name,

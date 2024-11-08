@@ -13,7 +13,6 @@ class Review {
     required this.createdAt,
   });
 
-  // Convert Review object to a map
   Map<String, dynamic> toMap() {
     return {
       'id': id,
@@ -24,7 +23,6 @@ class Review {
     };
   }
 
-  // Create Review object from a map
   factory Review.fromMap(Map<String, dynamic> map) {
     return Review(
       id: map['id'],
@@ -35,7 +33,6 @@ class Review {
     );
   }
 
-  // Create a copy of Review with optional parameter updates
   Review copyWith({
     int? id,
     int? productId,

@@ -3,7 +3,7 @@ class Product {
   String name;
   String description;
   double price;
-  int categoryId; // Add this to link product to category
+  int categoryId;
   String imageUrl;
   int stockQuantity;
   String categoryName;
@@ -25,7 +25,7 @@ class Product {
       'name': name,
       'description': description,
       'price': price,
-      'category_id': categoryId, // Map this to categoryId in the database
+      'category_id': categoryId,
       'image_url': imageUrl,
       'stock_quantity': stockQuantity,
     };
@@ -34,14 +34,13 @@ class Product {
   factory Product.fromMap(Map<String, dynamic> map) {
     return Product(
       id: map['id'],
-      name: map['name'] ?? '', // Provide a default empty string if null
+      name: map['name'] ?? '',
       description: map['description'] ?? '',
       price: map['price'] ?? 0.0,
       categoryId: map['category_id'],
       imageUrl: map['image_url'] ?? '',
       stockQuantity: map['stock_quantity'] ?? 0,
-      categoryName:
-          map['categoryName'] ?? '', // Ensure this is handled if it's nullable
+      categoryName: map['categoryName'] ?? '',
     );
   }
 
